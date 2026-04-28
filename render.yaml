@@ -22,13 +22,13 @@ services:
       - key: MPESA_ENVIRONMENT
         value: sandbox
       - key: ADMIN_SECRET_KEY
-        generateValue: true
+        sync: false
       - key: CALLBACK_BASE_URL
         sync: false
       - key: PYTHON_VERSION
         value: "3.11.0"
 
-  # Frontend
+  # Frontend Static Site
   - type: web
     name: kabanye-space
     runtime: static
@@ -37,10 +37,7 @@ services:
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          name: kabanye-space-api
-          type: web
-          property: url
+        value: https://kabanye-space-api.onrender.com/api
     routes:
       - type: rewrite
         source: /*
