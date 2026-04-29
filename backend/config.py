@@ -6,16 +6,23 @@ import os
 load_dotenv()
 
 
-class Settings(BaseSettings):
-    # Database - Handle Render's PostgreSQL connection string
-    # Render uses "postgres://" but asyncpg needs "postgresql+asyncpg://"
-    _raw_db_url: str = os.getenv("DATABASE_URL", "")
-    DATABASE_URL: str = (
-        _raw_db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-        if _raw_db_url
-        else "postgresql+asyncpg://kabanye:Kabanye123@localhost:5432/kabanye_space"
-    )
+def get_database_url() -> str:
+    """Get properly formatted database URL for asyncpg"""
+    url = os.getenv("DATABASE_URL", "")
     
+    if not url:
+        return "postgresql+asyncpg://kabanye:Kabanye123@localhost:5432/kabanye_space"
+    
+    # Fix for Supabase: postgresql:// → postgresql+asyncpg://
+    # Fix for Render:   postgres:// → postgresql+asyncpg://
+    if "+asyncpg" not in url:
+        url = url.replace("postgresql://", "postgresql+asyncpg://")
+        url = url.replace("postgres://", "postgresql+asyncpg://")
+    
+    return url
+
+
+class Settings(BaseSettings):
     # M-Pesa Daraja API
     MPESA_CONSUMER_KEY: str = os.getenv("MPESA_CONSUMER_KEY", "your_consumer_key")
     MPESA_CONSUMER_SECRET: str = os.getenv("MPESA_CONSUMER_SECRET", "your_consumer_secret")

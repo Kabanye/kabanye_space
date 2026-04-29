@@ -1,24 +1,14 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from config import get_settings
-import ssl
+from config import get_database_url
 
-settings = get_settings()
-
-# SSL context required for Render PostgreSQL
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
+DATABASE_URL = get_database_url()
 
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    DATABASE_URL,
     echo=False,
     pool_size=5,
     max_overflow=10,
-    connect_args={
-        "ssl": ssl_context,
-        "timeout": 30,
-    },
 )
 
 AsyncSessionLocal = async_sessionmaker(

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import init_db
 from routes import public, admin, payment
-from config import get_settings
+from config import get_settings, get_database_url
 import os
 
 settings = get_settings()
