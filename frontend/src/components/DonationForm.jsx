@@ -45,9 +45,11 @@ const DonationForm = ({ onSuccess, onError }) => {
     if (!formData.amount || formData.amount < 1) newErrors.amount = 'Minimum KES 1';
     if (formData.amount > 150000) newErrors.amount = 'Maximum KES 150,000';
     
-    const phoneRegex = /^(?:\+254|254|0)?[17]\d{8}$/;
-    if (!phoneRegex.test(formData.phone_number.replace(/[\s\-\(\)]/g, ''))) {
-      newErrors.phone_number = 'Enter a valid M-Pesa number';
+    // Accept all valid Kenyan phone formats
+    const rawPhone = formData.phone_number.replace(/[\s\-\(\)]/g, '');
+    const phoneRegex = /^(?:\+?254|0)?[17]\d{8}$/;
+    if (!phoneRegex.test(rawPhone)) {
+      newErrors.phone_number = 'Enter valid number (e.g. 0712345678)';
     }
     if (formData.message && formData.message.length > 500) newErrors.message = 'Max 500 characters';
 
@@ -61,26 +63,36 @@ const DonationForm = ({ onSuccess, onError }) => {
     
     setLoading(true);
     try {
+      // Normalize phone: always convert to 254XXXXXXXXX
       let phone = formData.phone_number.replace(/[\s\-\(\)]/g, '');
+      if (phone.startsWith('+')) phone = phone.slice(1);
       if (phone.startsWith('0')) phone = '254' + phone.slice(1);
-      else if (phone.startsWith('+')) phone = phone.slice(1);
+      if (/^[17]\d{8}$/.test(phone)) phone = '254' + phone;
       
       const payload = {
-        amount: parseFloat(formData.amount),
+        amount: Number(formData.amount),
         phone_number: phone,
-        name: formData.name?.trim() || undefined,
-        message: formData.message?.trim() || undefined,
       };
+      
+      if (formData.name?.trim()) payload.name = formData.name.trim();
+      if (formData.message?.trim()) payload.message = formData.message.trim();
       
       const response = await createDonation(payload);
       onSuccess(response.data);
     } catch (error) {
-      // Handle different error formats
-      const errorMessage = 
-        error.response?.data?.detail || 
-        error.response?.data?.message || 
-        error.message || 
-        'Failed to initiate payment';
+      let errorMessage = 'Failed to initiate payment';
+      
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map(e => e.msg).join('. ');
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
       onError(errorMessage);
     } finally {
       setLoading(false);
@@ -246,25 +258,18 @@ const DonationForm = ({ onSuccess, onError }) => {
       </div>
 
       {/* Submit Button */}
-      <button
-        type="submit"
-        disabled={loading}
-        className="relative w-full group mt-2"
-      >
+      <button type="submit" disabled={loading} className="relative w-full group mt-2">
         <div className="absolute -inset-1 bg-gradient-to-r from-green-400 to-emerald-400 rounded-2xl blur-lg opacity-0 group-hover:opacity-70 transition-all duration-500" />
         <div className="relative w-full px-6 py-4 bg-gray-900 text-white font-bold rounded-2xl shadow-xl shadow-gray-200 hover:shadow-2xl hover:shadow-gray-300/50 hover:-translate-y-0.5 transition-all duration-300 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          
           {loading ? (
             <span className="relative z-10 flex items-center justify-center text-base">
-              <Loader className="w-5 h-5 mr-3 animate-spin" />
-              Sending STK Push...
+              <Loader className="w-5 h-5 mr-3 animate-spin" />Sending STK Push...
             </span>
           ) : (
             <span className="relative z-10 flex items-center justify-center text-base">
-              <Heart className="w-4 h-4 mr-2" />
-              Donate via M-Pesa
+              <Heart className="w-4 h-4 mr-2" />Donate via M-Pesa
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </span>
           )}
@@ -274,13 +279,11 @@ const DonationForm = ({ onSuccess, onError }) => {
       {/* Trust Footer */}
       <div className="flex items-center justify-center gap-5 pt-2 pb-1">
         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-          <Shield className="w-3.5 h-3.5 text-green-500" />
-          Secure M-Pesa
+          <Shield className="w-3.5 h-3.5 text-green-500" />Secure M-Pesa
         </div>
         <div className="w-px h-4 bg-gray-200" />
         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-          <Zap className="w-3.5 h-3.5 text-green-500" />
-          Instant STK Push
+          <Zap className="w-3.5 h-3.5 text-green-500" />Instant STK Push
         </div>
       </div>
     </form>

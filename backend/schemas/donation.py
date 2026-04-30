@@ -6,17 +6,19 @@ import re
 
 class DonationCreate(BaseModel):
     amount: float = Field(..., gt=0, description="Donation amount in KES")
-    phone_number: str = Field(..., min_length=10, max_length=15)
+    phone_number: str = Field(...)  # ✅ removed min_length/max_length — validator handles this
     name: Optional[str] = Field(None, max_length=100)
     message: Optional[str] = Field(None, max_length=500)
 
     @validator('phone_number')
     def validate_kenyan_phone(cls, v):
         v = re.sub(r'[\s\-\(\)]', '', v)
-        if v.startswith('+254'):
+        if v.startswith('+'):
             v = v[1:]
-        elif v.startswith('0'):
+        if v.startswith('0'):
             v = '254' + v[1:]
+        if re.match(r'^[17]\d{8}$', v):  # ✅ handle bare 7xx/1xx (9 digits)
+            v = '254' + v
         if not re.match(r'^254[17]\d{8}$', v):
             raise ValueError('Invalid Kenyan phone number format')
         return v
