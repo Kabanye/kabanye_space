@@ -65,16 +65,23 @@ const DonationForm = ({ onSuccess, onError }) => {
       if (phone.startsWith('0')) phone = '254' + phone.slice(1);
       else if (phone.startsWith('+')) phone = phone.slice(1);
       
-      const response = await createDonation({
+      const payload = {
         amount: parseFloat(formData.amount),
         phone_number: phone,
         name: formData.name?.trim() || undefined,
         message: formData.message?.trim() || undefined,
-      });
+      };
       
+      const response = await createDonation(payload);
       onSuccess(response.data);
     } catch (error) {
-      onError(error.response?.data?.message || 'Failed to initiate payment');
+      // Handle different error formats
+      const errorMessage = 
+        error.response?.data?.detail || 
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to initiate payment';
+      onError(errorMessage);
     } finally {
       setLoading(false);
     }
